@@ -34,6 +34,7 @@ class Permission extends Model
      */
     protected $casts = [];
 
+
     public function roles(): BelongsToMany
     {
         return $this->belongsToMany(Role::class, 'accesses', 'permission_id', 'role_id');
