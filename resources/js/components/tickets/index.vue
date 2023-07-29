@@ -2,6 +2,9 @@
 import { onMounted, ref } from 'vue';
 
 let tickets = ref([]);
+let perPage = ref([])
+// let currentPage = ref([])
+// const maxVisibleButtons = 3
 
 onMounted(async () => {
     getTickets();
@@ -11,6 +14,7 @@ const getTickets = async () => {
     const res = await axios.get('/api/get_all_ticket')
     console.log(res)
     tickets.value = res.data.data
+
 };
 
 </script>
@@ -41,5 +45,8 @@ const getTickets = async () => {
                 <tr>Ticket not found</tr>
             </tbody>
         </table>
+        <div class="paginate">
+
+        </div>
     </div>
 </template>
