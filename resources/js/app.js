@@ -1,7 +1,7 @@
 import './bootstrap';
 
 import { createApp } from 'vue'
-import app from '@/components/app.vue'
+import app from './components/app.vue'
 import router from './router/index';
 import Pusher from 'pusher-js'
 

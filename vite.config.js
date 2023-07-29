@@ -26,10 +26,10 @@ export default defineConfig({
         }
     },
     resolve: {
-        alias: {
-            '@': './resources/js/',
-            'vue': 'vue/dist/vue.esm-bundler',
-        }
+        // alias: {
+        //     '@': './resources/js/',
+        //     'vue': 'vue/dist/vue.esm-bundler',
+        // }
     },
     mode: 'development'
 });
