@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CommentController;
 use App\Http\Controllers\TicketController;
 use Illuminate\Http\Request;
@@ -20,15 +21,18 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
 
-// Route::post('/signin',);
+Route::post('/signin', [AuthController::class, 'signin'])->name('sign_in');
+
 
 Route::get('/get_all_ticket', [TicketController::class, 'index'])->name('get_all_tickets');
 Route::get('/ticket/{ticket}', [TicketController::class, 'show'])->name('get_ticket');
 Route::get('/ticket/{ticket}/comments', [CommentController::class, 'index'])->name('get_ticket_comment');
 
 Route::group(['middleware' => ['auth:sanctum',]], function () {
+    Route::post('/signout', [AuthController::class, 'signout'])->name('sign_out');
+
     // Ticket : user action
-    Route::get('/ticket', [TicketController::class, 'index'])->name('get_user_ticket');
+    Route::get('/tickets', [TicketController::class, 'index'])->name('get_user_ticket');
     Route::post('/ticket', [TicketController::class, 'store'])->name('create_ticket');
     Route::match(['put', 'patch'], '/ticket/{ticket}', [TicketController::class, 'update'])->name('update_ticket');
     Route::delete('/ticket/{ticket}', [TicketController::class, 'destroy'])->name('delete_ticket');
