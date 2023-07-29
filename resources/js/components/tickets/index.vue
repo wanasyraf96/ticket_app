@@ -8,8 +8,9 @@ onMounted(async () => {
 });
 
 const getTickets = async () => {
-let res = await axios.get('/api/get_all_tickets')
-console.log(res)
+    const res = await axios.get('/api/get_all_ticket')
+    console.log(res)
+    tickets.value = res.data.data
 };
 
 </script>
@@ -28,11 +29,14 @@ console.log(res)
                 </tr>
             </thead>
             <tbody>
-                <tr>
-                    <td></td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
+                <tr v-for="ticket in tickets" :key="'ticket.id'" v-if="tickets.length > 0">
+                    <td>{{ ticket.status }}</td>
+                    <td>{{ ticket.title }}</td>
+                    <td>{{ ticket.created_at }}</td>
+                    <td>{{ ticket.priority }}</td>
+                </tr>
+                <tr v-else>
+                    <td>Ticket not found</td>
                 </tr>
             </tbody>
         </table>
