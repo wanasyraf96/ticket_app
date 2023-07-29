@@ -53,6 +53,7 @@ class TicketController extends Controller
         ])
             ->when(auth()->id(), fn ($query) => $query->where('creator', auth()->id()))
             ->when($search, fn ($query) => $query->where('title', 'like', $search))
+
             // Filtering
             ->when(count($queryFilterParams) > 0, function ($query) use ($queryFilterParams, $table) {
                 foreach ($queryFilterParams as $key => $value) {
@@ -69,7 +70,7 @@ class TicketController extends Controller
                     $query->whereIn($key, $filteredIds);
                 }
             })
-            // custom ordering
+            // query order: order based on entries columns
             ->when(
                 count($queryOrderParams) > 0,
                 function ($query) use ($queryOrderParams) {
@@ -145,13 +146,15 @@ class TicketController extends Controller
      */
     public function destroy(Ticket $ticket)
     {
-        $ticket->delete();
+        if (auth()->id() !== $ticket->creator)
+            $ticket->delete();
         return response()->noContent();
     }
 
     /**
      * Assign the tickets to a staff
      *
+     * @param Ticket $ticket
      * @param User @user
      * @return \Http\Response
      */
@@ -163,6 +166,51 @@ class TicketController extends Controller
         $ticket->assignor = auth()->id();
         $ticket->assignee = $user->id;
         $ticket->save();
+
+        // dispatch event
         return $ticket;
+    }
+
+
+    /**
+     * Update the ticket status
+     *
+     * @param Illuminate\Http\Request $request
+     * @param Ticket $ticket
+     * @return \Http\Response
+     */
+    public function updateStatus(Request $request, Ticket $ticket)
+    {
+        $lookup = $this->lookupElement('ticket_status');
+        $priorityIdsString = implode(',', array_map(fn ($item) => trim($item['id']), $lookup));
+        $request->validate([
+            'priority' => 'in:' . $priorityIdsString
+        ]);
+        $ticket->status = $request->priority;
+        $ticket->save();
+
+        // dispatch event
+        return response()->noContent();
+    }
+
+    /**
+     * Update the ticket priority
+     *
+     * @param Illuminate\Http\Request $request
+     * @param Ticket $ticket
+     * @return \Http\Response
+     */
+    public function updatePriority(Request $request, Ticket $ticket)
+    {
+        $lookup = $this->lookupElement('ticket_priority');
+        $priorityIdsString = implode(',', array_map(fn ($item) => trim($item['id']), $lookup));
+        $request->validate([
+            'priority' => 'in:' . $priorityIdsString
+        ]);
+        $ticket->priority = $request->priority;
+        $ticket->save();
+
+        // dispatch event
+        return response()->noContent();
     }
 }
