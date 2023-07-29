@@ -24,7 +24,7 @@ class TicketController extends Controller
 
         $queryOrderParams = [];
         $queryFilterParams = [];
-        $availableOrderColumn = ['priority', 'created_at'];
+        $availableOrderColumn = ['priority', 'created_at', 'title'];
         $availableFilterColumn = ['priority', 'status'];
         $table = 'ticket_';
         $search = null;
@@ -129,7 +129,7 @@ class TicketController extends Controller
      */
     public function update(Request $request, Ticket $ticket)
     {
-        if (auth()->id() !== $ticket->creator) return response(['You do not have permission for this'], 403);
+        if (auth()->id() !== $ticket->creator) return response(['error' => 'You do not have permission for this'], 403);
         $request->validate([
             'title' => 'string|sometimes',
             'description' => 'string|nullable',
@@ -146,8 +146,9 @@ class TicketController extends Controller
      */
     public function destroy(Ticket $ticket)
     {
-        if (auth()->id() !== $ticket->creator)
-            $ticket->delete();
+        if (auth()->id() !== $ticket->creator) return response(['error' => 'You do not have permission for this'], 403);
+
+        $ticket->delete();
         return response()->noContent();
     }
 
@@ -184,9 +185,9 @@ class TicketController extends Controller
         $lookup = $this->lookupElement('ticket_status');
         $priorityIdsString = implode(',', array_map(fn ($item) => trim($item['id']), $lookup));
         $request->validate([
-            'priority' => 'in:' . $priorityIdsString
+            'status' => 'required|in:' . $priorityIdsString
         ]);
-        $ticket->status = $request->priority;
+        $ticket->status = $request->status;
         $ticket->save();
 
         // dispatch event
@@ -205,7 +206,7 @@ class TicketController extends Controller
         $lookup = $this->lookupElement('ticket_priority');
         $priorityIdsString = implode(',', array_map(fn ($item) => trim($item['id']), $lookup));
         $request->validate([
-            'priority' => 'in:' . $priorityIdsString
+            'priority' => 'required|in:' . $priorityIdsString
         ]);
         $ticket->priority = $request->priority;
         $ticket->save();

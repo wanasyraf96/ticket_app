@@ -44,5 +44,6 @@ Route::group(['middleware' => ['auth:sanctum',]], function () {
 
 Route::group(['middleware' => ['auth:sanctum', 'staff.api']], function () {
     Route::match(['put', 'patch'], '/ticket/{ticket}/{user}', [TicketController::class, 'assignTicket'])->name('assign_ticket');
-    Route::post('/ticket/{ticket}', [TicketController::class, 'updateStatus'])->name('update_ticket_status');
+    Route::post('/ticket/{ticket}/status', [TicketController::class, 'updateStatus'])->name('update_ticket_status');
+    Route::post('/ticket/{ticket}/priority', [TicketController::class, 'updatePriority'])->name('update_ticket_priority');
 });

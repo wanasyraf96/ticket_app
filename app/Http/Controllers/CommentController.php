@@ -48,7 +48,7 @@ class CommentController extends Controller
      */
     public function update(Request $request, Comment $comment)
     {
-        if (auth()->id() !== $comment->user_id) return response(['You do not have permission for this'], 403);
+        if (auth()->id() !== $comment->user_id) return response(['error' => 'You do not have permission for this'], 403);
 
         $request->validate([
             'comment' => 'string'
@@ -65,8 +65,8 @@ class CommentController extends Controller
      */
     public function destroy(Comment $comment)
     {
-        if ($comment->user_id === auth()->id())
-            $comment->delete();
+        if ($comment->user_id !== auth()->id()) return response(['error' => 'You do not have permission for this'], 403);
+        $comment->delete();
         return response()->noContent();
     }
 }
