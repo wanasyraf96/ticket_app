@@ -28,16 +28,18 @@ const getTickets = async () => {
                     <th>Priority</th>
                 </tr>
             </thead>
-            <tbody>
-                <tr v-for="ticket in tickets" :key="'ticket.id'" v-if="tickets.length > 0">
+            <tbody v-if="tickets.length > 0">
+                <tr v-for="ticket in tickets" :key="ticket.id">
                     <td>{{ ticket.status }}</td>
                     <td>{{ ticket.title }}</td>
                     <td>{{ ticket.created_at }}</td>
                     <td>{{ ticket.priority }}</td>
+                    <td>{{ ticket.priority }}</td>
                 </tr>
-                <tr v-else>
-                    <td>Ticket not found</td>
-                </tr>
+            </tbody>
+
+            <tbody v-else>
+                <tr>Ticket not found</tr>
             </tbody>
         </table>
     </div>

@@ -12,7 +12,10 @@ class TicketController extends Controller
      */
     public function index()
     {
-        $ticket = Ticket::paginate(request('per_page') ?? 10);
+        $ticket = Ticket::with('user')
+            ->orderBy('created_at', 'desc')
+            ->orderBy('priority', 'desc')
+            ->paginate(request('per_page') ?? 10);
         return $ticket;
     }
 
