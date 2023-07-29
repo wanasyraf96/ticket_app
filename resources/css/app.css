@@ -1,5 +1,3 @@
-table {
-    border-collapse: collapse;
-    border: 1px solid #aaa;
-    box-shadow: none;
-}
+@tailwind base;
+@tailwind components;
+@tailwind utilities;

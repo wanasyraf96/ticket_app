@@ -1,8 +1,24 @@
+<script setup>
+import { onMounted, ref } from 'vue';
+
+let tickets = ref([]);
+
+onMounted(async () => {
+    getTickets();
+});
+
+const getTickets = async () => {
+let res = await axios.get('/api/get_all_tickets')
+console.log(res)
+};
+
+</script>
+
 <template>
     <div class="">
 
         <!-- table -->
-        <table>
+        <table class="">
             <thead>
                 <tr>
                     <th>Status</th>

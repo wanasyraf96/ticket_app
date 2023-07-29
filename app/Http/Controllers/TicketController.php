@@ -10,9 +10,10 @@ class TicketController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(): Ticket
     {
-        //
+        $ticket = Ticket::paginate(10);
+        return $ticket;
     }
 
     /**
