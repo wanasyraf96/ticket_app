@@ -22,6 +22,7 @@ return new class extends Migration
             $table->char('status')->default(1);
             $table->dateTime('completed_at')->nullable();
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 

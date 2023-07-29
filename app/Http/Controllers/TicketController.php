@@ -2,29 +2,95 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Lookup;
 use App\Models\Ticket;
+use App\Models\User;
+use App\Traits\HelpersTrait;
+use App\Traits\LookupTrait;
+use App\Traits\UserRolesTrait;
+use Carbon\Carbon;
+use DateTime;
 use Illuminate\Http\Request;
 
 class TicketController extends Controller
 {
+    use LookupTrait, UserRolesTrait, HelpersTrait;
     /**
      * Display a listing of the resource.
      */
     public function index()
     {
-        $ticket = Ticket::with('user')
-            ->orderBy('created_at', 'desc')
-            ->orderBy('priority', 'desc')
-            ->paginate(request('per_page') ?? 10);
-        return $ticket;
-    }
+        // ?/&|s=(priority=desc,created_at=desc)
 
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
-    {
-        //
+        $queryOrderParams = [];
+        $queryFilterParams = [];
+        $availableOrderColumn = ['priority', 'created_at'];
+        $availableFilterColumn = ['priority', 'status'];
+        $table = 'ticket_';
+        $search = null;
+
+
+        if (request()->has('order')) {
+            $orderParams = $this->extractQueryParams(request('order'));
+            $queryOrderParams = $this->checkQueryNames($orderParams, $availableOrderColumn, 'sorting');
+        }
+
+        if (request()->has('filter')) {
+            $filterParams = $this->extractQueryParams(request('filter'));
+            $encodedFilterParams = $this->checkQueryNames($filterParams, $availableFilterColumn, 'filtering');
+            // decode
+            $queryFilterParams = array_map(fn ($query) => base64_decode($query), ($encodedFilterParams));
+            // return $queryFilterParams;
+        }
+
+        if (request()->has('search')) {
+            $search = '%' . urldecode(trim(request('search'))) . '%';
+        }
+
+        $tickets = Ticket::select(['id', 'title', 'description', 'created_at', 'updated_at', 'priority', 'status', 'creator', 'assignee'])->with([
+            'user:id,name',
+            'assignee:id,name'
+        ])
+            ->when(auth()->id(), fn ($query) => $query->where('creator', auth()->id()))
+            ->when($search, fn ($query) => $query->where('title', 'like', $search))
+            // Filtering
+            ->when(count($queryFilterParams) > 0, function ($query) use ($queryFilterParams, $table) {
+                foreach ($queryFilterParams as $key => $value) {
+                    $values = explode(',', $value);
+                    $type = $table . $key;
+                    $lookup = $this->lookupElement($type);
+                    $filteredLookup = array_filter($lookup, function ($item) use ($values) {
+                        return in_array($item['name'], $values);
+                    });
+                    $filteredIds = array_map(function ($item) {
+                        return $item['id'];
+                    }, $filteredLookup);
+
+                    $query->whereIn($key, $filteredIds);
+                }
+            })
+            // custom ordering
+            ->when(
+                count($queryOrderParams) > 0,
+                function ($query) use ($queryOrderParams) {
+                    foreach ($queryOrderParams as $key => $value) {
+                        if ($value === 'asc' || $value === 'desc')
+                            $query->orderBy($key, $value);
+                    }
+                },
+                fn ($query) => $query->orderBy('priority', 'desc')
+                    ->orderBy('created_at', 'asc')
+            )
+            ->paginate(request('per_page') ?? 10);
+
+        $tickets->getCollection()->map(function ($ticket) {
+            $ticket->created_at = Carbon::parse($ticket->created_at)->format('Y-m-d H:i:s');
+            $ticket->updated_at = Carbon::parse($ticket->updated_at)->format('Y-m-d H:i:s');
+            $ticket->priority = $this->getPriority($ticket->priority);
+            $ticket->status = $this->getStatus($ticket->status);
+            $ticket->links = env('APP_URL') . "/ticket/" . str_pad($ticket->id, 7, 0, STR_PAD_LEFT);
+        });
+        return $tickets;
     }
 
     /**
@@ -32,7 +98,17 @@ class TicketController extends Controller
      */
     public function store(Request $request)
     {
-        //
+        $request->validate([
+            'title' => 'string|sometimes',
+            'description' => 'string|nullable',
+        ], ['title.string' => 'title cannot be empty']);
+
+        $ticket = new Ticket([
+            'title' => $request->title,
+            'description' => $request->description
+        ]);
+        $ticket = auth()->user()->tickets()->save($ticket);
+        return $ticket;
     }
 
     /**
@@ -40,15 +116,11 @@ class TicketController extends Controller
      */
     public function show(Ticket $ticket)
     {
-        //
-    }
-
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(Ticket $ticket)
-    {
-        //
+        $ticket->created_at = Carbon::parse($ticket->created_at)->format('Y-m-d H:i:s');
+        $ticket->updated_at = Carbon::parse($ticket->updated_at)->format('Y-m-d H:i:s');
+        $ticket->priority = $this->getPriority($ticket->priority);
+        $ticket->status = $this->getStatus($ticket->status);
+        return $ticket->load(['user:id,name', 'assignee:id,name', 'assignor:id,name']);
     }
 
     /**
@@ -56,7 +128,16 @@ class TicketController extends Controller
      */
     public function update(Request $request, Ticket $ticket)
     {
-        //
+        if (auth()->id() !== $ticket->creator) return response(['You do not have permission for this'], 403);
+        $request->validate([
+            'title' => 'string|sometimes',
+            'description' => 'string|nullable',
+        ], ['title.string' => 'title cannot be empty']);
+
+        $ticket->update($request->all());
+        $ticket->save();
+
+        return response("updated", 202);
     }
 
     /**
@@ -64,6 +145,24 @@ class TicketController extends Controller
      */
     public function destroy(Ticket $ticket)
     {
-        //
+        $ticket->delete();
+        return response()->noContent();
+    }
+
+    /**
+     * Assign the tickets to a staff
+     *
+     * @param User @user
+     * @return \Http\Response
+     */
+    public function assignTicket(Ticket $ticket, User $user)
+    {
+        if (!$this->isStaff($user->id)) {
+            return response(["error" => "only assignable to staff."], 422);
+        }
+        $ticket->assignor = auth()->id();
+        $ticket->assignee = $user->id;
+        $ticket->save();
+        return $ticket;
     }
 }

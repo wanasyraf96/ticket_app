@@ -20,3 +20,17 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 });
 
 Route::get('/get_all_ticket', [TicketController::class, 'index'])->name('get_all_tickets');
+Route::get('/ticket/{ticket}', [TicketController::class, 'show'])->name('get_ticket');
+
+Route::group(['middleware' => ['auth:sanctum',]], function () {
+    // Ticket : user action
+    Route::get('/ticket', [TicketController::class, 'index'])->name('get_user_ticket');
+    Route::post('/ticket', [TicketController::class, 'store'])->name('create_ticket');
+    Route::match(['put', 'patch'], '/ticket/{ticket}', [TicketController::class, 'update'])->name('update_ticket');
+
+    // Comments
+});
+
+Route::group(['middleware' => ['auth:sanctum', 'staff.api']], function () {
+    Route::match(['put', 'patch'], '/ticket/{ticket}/{user}', [TicketController::class, 'assignTicket'])->name('assign_ticket');
+});

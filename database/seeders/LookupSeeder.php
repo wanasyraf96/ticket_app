@@ -17,19 +17,19 @@ class LookupSeeder extends Seeder
             [
                 'for' => 'ticket_status',
                 'data' => json_encode([
-                    ['id' => 1, 'active'],
-                    ['id' => 2, 'deactive'],
-                    ['id' => 3, 'complete'],
-                    ['id' => 4, 'pending']
+                    ['id' => 1, 'name' => 'active'],
+                    ['id' => 2, 'name' => 'deactive'],
+                    ['id' => 3, 'name' => 'complete'],
+                    ['id' => 4, 'name' => 'pending']
                 ])
             ],
             [
                 'for' => 'ticket_priority',
                 'data' => json_encode([
-                    ['id' => 1, 'low'],
-                    ['id' => 2, 'medium'],
-                    ['id' => 3, 'high'],
-                    ['id' => 4, 'urgent']
+                    ['id' => 1, 'name' => 'low'],
+                    ['id' => 2, 'name' => 'medium'],
+                    ['id' => 3, 'name' => 'high'],
+                    ['id' => 4, 'name' => 'urgent']
                 ])
             ],
         ];

@@ -34,7 +34,6 @@ const getTickets = async () => {
                     <td>{{ ticket.title }}</td>
                     <td>{{ ticket.created_at }}</td>
                     <td>{{ ticket.priority }}</td>
-                    <td>{{ ticket.priority }}</td>
                 </tr>
             </tbody>
 

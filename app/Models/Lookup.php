@@ -9,6 +9,8 @@ class Lookup extends Model
 {
     use HasFactory;
 
+    protected $table = 'lookup';
+
     /**
      * The attributes that are mass assignable.
      *
