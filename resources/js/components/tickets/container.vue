@@ -1,8 +1,9 @@
 <script setup>
-import { ref, computed, onMounted, watch, reactive } from 'vue';
+import { ref, computed, onMounted, watch, reactive, defineComponent } from 'vue';
 import axios from 'axios';
 import { useRouter } from 'vue-router';
-import { ChevronDownIcon as HeroIconChevronDown, ChevronUpIcon as HeroIconChevronUp } from '@vue-hero-icons/solid';
+// import { PulseLoader } from 'vue-spinner/dist/vue-spinner.min.js';
+// const spinnerType = 'Wave';
 
 const router = new useRouter()
 let tickets = ref([]);
@@ -18,14 +19,24 @@ let showModal = ref(false);
 let selectedStatus = ref('');
 let selectedPriority = ref('');
 let filter = ref('')
+let loading = ref(false);
+let users = ref(null)
+
+let activePriorityTicketId = ref(null)
+let selectedPriorityChange = ref(null)
+
+let activeStatusTicketId = ref(null)
+let selectedStatusChange = ref(null)
+
+const access_token = localStorage.getItem('access_token')
 
 const tableHeaders = reactive([
     { label: 'No.', key: 'number', size: 16, isSortable: false },
     { label: 'Assign To', key: 'assign', size: 10, isSortable: false },
-    { label: 'Title', key: 'title', size: 0, isSortable: true },
-    { label: 'Priority', key: 'priority', size: 26, isSortable: true },
-    { label: 'Status', key: 'status', size: 24, isSortable: true },
-    { label: 'Date', key: 'date', size: 36, isSortable: true },
+    { label: 'Title', key: 'title', size: 0, isSortable: false },
+    { label: 'Priority', key: 'priority', size: 26, isSortable: false },
+    { label: 'Status', key: 'status', size: 32, isSortable: false },
+    { label: 'Date', key: 'date', size: 36, isSortable: false },
 ]);
 
 // Single Sort
@@ -80,13 +91,29 @@ const getTickets = async () => {
     if (searchTerm.value) {
         search.value = `&search=${encodeURIComponent(searchTerm.value.trim().toLowerCase())}`
     }
-
     const url = `/api/get_all_ticket?page=${currentPage.value}&per_page=${numRows.value}${search.value === null ? '' : search.value}${filter.value === null ? '' : filter.value}`
     const res = await axios.get(url, { headers: { 'Accept': 'application/json' } });
     tickets.value = res.data.data;
     currentPage.value = res.data.current_page
     ticket_links.value = res.data.links
+    loading.value = false
 };
+
+const getUser = async () => {
+
+    if (access_token === null || access_token === undefined)
+        router.push('/')
+
+    const res = await axios({
+        url: '/api/user',
+        method: 'get',
+        headers: {
+            'Authorization': `Bearer ${access_token}`,
+            'Accept': 'application/json',
+        }
+    })
+    users.value = res.data
+}
 
 // Listen to channel
 window.Echo.channel('ticketUpdate')
@@ -131,6 +158,8 @@ const decodeHtml = ((text) => {
 })
 
 const handlePageChange = (link) => {
+    loading.value = true
+
     let page = currentPage.value;
     if (link.url === null) return
     if (link.label.indexOf('&laquo;') > -1) {
@@ -143,6 +172,7 @@ const handlePageChange = (link) => {
         page = link.label
     }
     currentPage.value = page
+
     getTickets()
 }
 
@@ -152,7 +182,8 @@ const handleSearch = () => {
 
     // Set a new timeout to delay the execution of getTickets()
     searchTimeout = setTimeout(() => {
-        getTickets();
+        loading.value = true;
+        getTickets()
     }, 500); // Adjust the delay time as needed (in milliseconds)
 }
 const handleSearchKeyUp = (event) => {
@@ -162,6 +193,7 @@ const handleSearchKeyUp = (event) => {
     handleSearch()
 }
 const handleTicketView = (ticket) => {
+    return;
     router.push(ticket.link);
 }
 
@@ -194,6 +226,8 @@ const closeModal = () => {
 };
 
 const applyFilter = () => {
+    loading.value = true;
+
     let filterOpt = '&filter='
 
     if (selectedStatus.value !== '') {
@@ -204,7 +238,8 @@ const applyFilter = () => {
     }
     filter.value = filterOpt
     currentPage.value = 1
-    getTickets();
+
+    getTickets()
 
     closeModal(); // Close the modal after applying the filter
 };
@@ -221,17 +256,64 @@ const capitalizeWord = (str) => {
     return str.charAt(0).toUpperCase() + str.slice(1);
 }
 
+const handlePriorityChange = () => {
+    fetch(`/api/ticket/${activePriorityTicketId.value}/priority`, {
+        method: 'post',
+        body: JSON.stringify({ priority: selectedPriorityChange.value }),
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${access_token}`,
+            'Accept': 'application/json',
+        }
+    })
+        .catch(err => console.error(err));
+    activePriorityTicketId.value = null
+}
+
+const showPriorityDropdown = (event, ticketId) => {
+    if (users.value.roles.find((role) => role.name === 'staff')) {
+        event.stopPropagation()
+        activePriorityTicketId.value = ticketId;
+    }
+}
+const handleStatusChange = () => {
+    fetch(`/api/ticket/${activeStatusTicketId.value}/status`, {
+        method: 'post',
+        body: JSON.stringify({ status: selectedStatusChange.value }),
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${access_token}`,
+            'Accept': 'application/json',
+        }
+    })
+
+        .catch(err => console.error(err));
+    activeStatusTicketId.value = null
+}
+
+const showStatusDropdown = (event, ticketId) => {
+    if (users.value.roles.find((role) => role.name === 'staff')) {
+        event.stopPropagation()
+        activeStatusTicketId.value = ticketId;
+    }
+}
+
 // watch number of rows change
 watch(numRows, () => {
+    loading.value = true
     getTickets()
 
 })
 
 // Fetch data on mount
 onMounted(async () => {
-    await getTickets();
+    loading.value = true;
+    await getTickets()
     await getLookup()
+    await getUser()
 });
+
+
 </script>
 
 <template>
@@ -264,8 +346,8 @@ onMounted(async () => {
                                     <select v-model="selectedStatus" id="status"
                                         class="text-sm border rounded py-2 px-3 focus:outline-none">
                                         <option value="">All</option>
-                                        <option v-for="item in statuses" :key="item.id" :value="item.id">
-                                            {{ capitalizeWord(item.name) }}
+                                        <option v-for="option in statuses" :key="option.id" :value="option.id">
+                                            {{ capitalizeWord(option.name) }}
                                         </option>
                                     </select>
                                 </div>
@@ -275,8 +357,8 @@ onMounted(async () => {
                                     <select v-model="selectedPriority" id="status"
                                         class="text-sm border rounded py-2 px-3 focus:outline-none">
                                         <option value="">All</option>
-                                        <option v-for="item in priorities" :key="item.id" :value="item.id">
-                                            {{ capitalizeWord(item.name) }}
+                                        <option v-for="option in priorities" :key="option.id" :value="option.id">
+                                            {{ capitalizeWord(option.name) }}
                                         </option>
                                     </select>
                                 </div>
@@ -361,8 +443,16 @@ onMounted(async () => {
                             </th>
                         </tr>
                     </thead>
-
-                    <tbody v-if="tickets.length > 0">
+                    <tbody v-if="loading">
+                        <tr>
+                            <td :class="`px-4 py-2 text-center`" :colspan="6" :rowspan="numRows">
+                                <!-- <Spinner :type="spinnerType" color="#3490dc" :size="50" /> -->
+                                <!-- <PulseLoader :loading="loading" color="#3490dc" :size="50" /> -->
+                                loading...
+                            </td>
+                        </tr>
+                    </tbody>
+                    <tbody v-else-if="tickets.length > 0">
                         <tr v-for="(ticket, index) in tickets" :key="ticket.id"
                             class="hover:bg-gray-200 cursor-pointer border-b border-slate-200"
                             @click="handleTicketView(ticket)">
@@ -382,24 +472,37 @@ onMounted(async () => {
                                 </div>
                             </td>
 
-                            <td class="px-4 py-2 text-center">
+                            <td class="px-4 py-2 text-center" @click="showPriorityDropdown($event, ticket.id)">
                                 <span
                                     :class="`bg-blue-100 text-blue-800 text-xs font-medium mr-2 px-2.5 py-0.5 rounded-full ${getPriorityColor(ticket.priority)}`">
                                     {{ ticket.priority }}
                                 </span>
+                                <select v-if="ticket.id === activePriorityTicketId" v-model="selectedPriorityChange"
+                                    @change="handlePriorityChange()">
+                                    <option v-for="option in priorities" :value="option.id" :key="option.id">{{ option.name
+                                    }}
+                                    </option>
+                                </select>
                             </td>
-                            <td class="px-4 py-2 text-center">
+
+                            <td class="px-4 py-2 text-center" @click="showStatusDropdown($event, ticket.id)">
                                 <span
                                     :class="`bg-blue-100 text-blue-800 text-xs font-medium mr-2 px-2.5 py-0.5 rounded-full ${getStatusColor(ticket.status)}`">
                                     {{ ticket.status }}
                                 </span>
+                                <select v-if="ticket.id === activeStatusTicketId" v-model="selectedStatusChange"
+                                    @change="handleStatusChange()">
+                                    <option v-for="option in statuses" :value="option.id" :key="option.id">{{ option.name
+                                    }}
+                                    </option>
+                                </select>
                             </td>
                             <td class="px-4 py-2 text-center">{{ ticket.human_readable_created_at }}</td>
                         </tr>
                     </tbody>
                     <tbody v-else>
                         <tr>
-                            <td class="px-4 py-2" :colspan="5">Ticket not found</td>
+                            <td :class="`px-4 py-2 text-center`" :colspan="6" :rowspan="numRows">Ticket not found</td>
                         </tr>
                     </tbody>
                 </table>
@@ -415,8 +518,6 @@ onMounted(async () => {
                     </div>
                 </div>
             </div>
-
-
         </div>
     </div>
 </template>

@@ -1231,6 +1231,11 @@ vue-router@^4.0.13:
   dependencies:
     "@vue/devtools-api" "^6.0.0"
 
+vue-spinner@^1.0.4:
+  version "1.0.4"
+  resolved "https://registry.yarnpkg.com/vue-spinner/-/vue-spinner-1.0.4.tgz#0e794d9d93acb23b5b6564042157a531e7ce413b"
+  integrity sha512-GNG2F+8BLX201JT/jUX+84Gsi3ZteVQwt9K7mues3ts9FcQ95dGn7uu6a5ndSxdYYUEzfh1KngZiOE0u+l4itA==
+
 vue-tables-2@^2.3.5:
   version "2.3.5"
   resolved "https://registry.yarnpkg.com/vue-tables-2/-/vue-tables-2-2.3.5.tgz#d31d522922178b67b55359f582894f9c037d062e"
