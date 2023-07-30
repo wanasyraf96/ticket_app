@@ -18,7 +18,7 @@ class AuthController extends Controller
     public function signin(Request $request)
     {
         $request->validate([
-            'email' => 'required|exists:users,email|email',
+            'email' => 'required|exists:users,email|string',
             'password' => 'required|string'
         ]);
 

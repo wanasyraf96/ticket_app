@@ -89,7 +89,8 @@ class TicketController extends Controller
             $ticket->updated_at = Carbon::parse($ticket->updated_at)->format('Y-m-d H:i:s');
             $ticket->priority = $this->getPriority($ticket->priority);
             $ticket->status = $this->getStatus($ticket->status);
-            $ticket->links = env('APP_URL') . "/ticket/" . str_pad($ticket->id, 7, 0, STR_PAD_LEFT);
+            $ticket->link = "/ticket/" . str_pad($ticket->id, 7, 0, STR_PAD_LEFT);
+            $ticket->human_readable_created_at = Carbon::parse($ticket->created_at)->diffForHumans();
         });
         return $tickets;
     }

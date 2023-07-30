@@ -12,24 +12,20 @@ export default defineConfig({
             ],
             refresh: true,
         }),
-        vue({
-            // include: [ '**/*.vue', '**/*.js', '**/*.jsx', '**/*.css' ],
-            refresh: true,
-        }),
+        vue(),
     ],
     server: {
         // hmr: {
         //     host: 'localhost',
         // },
-        watch: {
-            usePolling: true
-        }
+        // watch: {
+        //     usePolling: true
+        // }
     },
     resolve: {
-        // alias: {
-        //     '@': './resources/js/',
-        //     'vue': 'vue/dist/vue.esm-bundler',
-        // }
+        alias: {
+            'vue': 'vue/dist/vue.esm-bundler',
+        }
     },
     mode: 'development'
 });

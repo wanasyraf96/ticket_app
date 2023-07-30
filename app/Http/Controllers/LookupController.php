@@ -3,24 +3,23 @@
 namespace App\Http\Controllers;
 
 use App\Models\Lookup;
+use App\Traits\LookupTrait;
 use Illuminate\Http\Request;
 
 class LookupController extends Controller
 {
+    use LookupTrait;
     /**
      * Display a listing of the resource.
      */
     public function index()
     {
-        //
-    }
-
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
-    {
-        //
+        $lookup = Lookup::select('for')->get();
+        $lookup = array_map(function ($element) {
+            $element['data'] = $this->lookupElement($element['for']);
+            return $element;
+        }, $lookup->toArray());
+        return $lookup;
     }
 
     /**
@@ -39,13 +38,6 @@ class LookupController extends Controller
         //
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(Lookup $lookup)
-    {
-        //
-    }
 
     /**
      * Update the specified resource in storage.

@@ -2,7 +2,9 @@
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CommentController;
+use App\Http\Controllers\LookupController;
 use App\Http\Controllers\TicketController;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -20,6 +22,7 @@ use Illuminate\Support\Facades\Route;
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
+Route::get('lookup', [LookupController::class, 'index'])->name('lookup');
 
 Route::post('/signin', [AuthController::class, 'signin'])->name('sign_in');
 
@@ -46,4 +49,13 @@ Route::group(['middleware' => ['auth:sanctum', 'staff.api']], function () {
     Route::match(['put', 'patch'], '/ticket/{ticket}/{user}', [TicketController::class, 'assignTicket'])->name('assign_ticket');
     Route::post('/ticket/{ticket}/status', [TicketController::class, 'updateStatus'])->name('update_ticket_status');
     Route::post('/ticket/{ticket}/priority', [TicketController::class, 'updatePriority'])->name('update_ticket_priority');
+});
+
+
+
+
+// User List
+
+Route::get('get-user', function () {
+    return User::select('email')->get();
 });
