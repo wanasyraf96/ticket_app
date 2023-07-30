@@ -16,3 +16,23 @@ body {
     background: #e3e3e3;
     color: #0f0f0f
 }
+
+/* Customize the sorting icon styles */
+.sortable-header {
+    cursor: pointer;
+}
+
+.sortable-header:after {
+    content: ' ↑↓';
+    opacity: 0.3;
+}
+
+.sortable-header.sorted-asc:after {
+    content: ' ↑';
+    opacity: 1;
+}
+
+.sortable-header.sorted-desc:after {
+    content: ' ↓';
+    opacity: 1;
+}

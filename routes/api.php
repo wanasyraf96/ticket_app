@@ -27,7 +27,7 @@ Route::get('lookup', [LookupController::class, 'index'])->name('lookup');
 Route::post('/signin', [AuthController::class, 'signin'])->name('sign_in');
 
 
-Route::get('/get_all_ticket', [TicketController::class, 'index'])->name('get_all_tickets');
+Route::middleware(['throttle:60,1'])->get('/get_all_ticket', [TicketController::class, 'index'])->name('get_all_tickets');
 Route::get('/ticket/{ticket}', [TicketController::class, 'show'])->name('get_ticket');
 Route::get('/ticket/{ticket}/comments', [CommentController::class, 'index'])->name('get_ticket_comment');
 

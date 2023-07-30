@@ -14,7 +14,7 @@ const routes = [
         component: TicketsContainer
     },
     {
-        path: '/ticket',
+        path: '/ticket/:id',
         component: TicketContainer
     },
     {
