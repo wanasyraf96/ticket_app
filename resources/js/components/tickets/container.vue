@@ -234,7 +234,7 @@ onMounted(async () => {
                             class="fixed inset-0 flex items-center justify-center z-10 bg-black bg-opacity-50">
                             <div class="bg-white p-6 rounded">
                                 <h2 class="text-lg font-semibold mb-4">Filter Options</h2>
-                                <!-- Add your filtering options here, for example: -->
+                                <!-- Add filtering options here -->
                                 <div class="mb-4">
                                     <label for="status">Status:</label>
                                     <select v-model="selectedStatus" id="status"
