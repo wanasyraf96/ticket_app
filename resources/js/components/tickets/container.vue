@@ -88,6 +88,30 @@ const getTickets = async () => {
     ticket_links.value = res.data.links
 };
 
+// Listen to channel
+window.Echo.channel('ticketUpdate')
+    .listen('.ticket.update', (event) => {
+        console.log('event', event[ 0 ])
+        console.log('ticket', tickets.value)
+
+        // Find the updated ticket in the reactive array based on the unique identifier (id)
+        const updatedTicket = tickets.value.find((ticket) => ticket.id === event[ 0 ].id);
+        console.log('Updated ticket:', updatedTicket);
+
+        if (updatedTicket) {
+            // Update the relevant properties of the ticket with the new data from the event[0]
+            updatedTicket.title = event[ 0 ].title;
+            updatedTicket.description = event[ 0 ].description;
+            updatedTicket.created_at = event[ 0 ].created_at;
+            updatedTicket.updated_at = event[ 0 ].updated_at;
+            updatedTicket.priority = event[ 0 ].priority;
+            updatedTicket.status = event[ 0 ].status;
+            updatedTicket.link = event[ 0 ].link;
+            updatedTicket.human_readable_created_at = event[ 0 ].human_readable_created_at;
+            // Add more properties as needed
+        }
+    });
+
 const getLookup = async () => {
     const res = await axios.get('/api/lookup')
     res.data.forEach(element => {

@@ -18,7 +18,7 @@ window.axios.defaults.headers.common[ 'X-Requested-With' ] = 'XMLHttpRequest';
 import Echo from 'laravel-echo';
 
 import Pusher from 'pusher-js';
-Pusher.logToConsole = true
+// Pusher.logToConsole = true
 window.Pusher = Pusher;
 
 window.Echo = new Echo({
@@ -31,3 +31,7 @@ window.Echo = new Echo({
     forceTLS: (import.meta.env.VITE_PUSHER_SCHEME ?? 'https') === 'https',
     enabledTransports: [ 'ws', 'wss' ],
 });
+
+// window.Echo.channel('ticketUpdate').listen('ticket.update', (e) => {
+//     console.log('Received :', );
+// });

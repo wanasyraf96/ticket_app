@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\TicketUpdateEvent;
 use App\Models\Lookup;
 use App\Models\Ticket;
 use App\Models\User;
@@ -142,7 +143,7 @@ class TicketController extends Controller
 
         $ticket->update($request->all());
         $ticket->save();
-
+        TicketUpdateEvent::dispatch($ticket);
         return response("updated", 202);
     }
 
@@ -195,7 +196,7 @@ class TicketController extends Controller
         $ticket->status = $request->status;
         $ticket->save();
 
-        // dispatch event
+        TicketUpdateEvent::dispatch($ticket);
         return response()->noContent();
     }
 
@@ -208,6 +209,7 @@ class TicketController extends Controller
      */
     public function updatePriority(Request $request, Ticket $ticket)
     {
+
         $lookup = $this->lookupElement('ticket_priority');
         $priorityIdsString = implode(',', array_map(fn ($item) => trim($item['id']), $lookup));
         $request->validate([
@@ -216,7 +218,7 @@ class TicketController extends Controller
         $ticket->priority = $request->priority;
         $ticket->save();
 
-        // dispatch event
+        TicketUpdateEvent::dispatch($ticket);
         return response()->noContent();
     }
 }
