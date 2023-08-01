@@ -11,5 +11,8 @@ const pusher = new Pusher(import.meta.env.VITE_PUSHER_APP_KEY, {
 
 createApp(app)
     .use(router)
+    // .component({
+
+    // })
     // .use(pusher)
     .mount('#root')

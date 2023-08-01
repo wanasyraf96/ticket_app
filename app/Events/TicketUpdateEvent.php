@@ -65,6 +65,7 @@ class TicketUpdateEvent implements ShouldBroadcast
             $ticket->status = $this->getStatus($ticket->status);
             $ticket->link = "/ticket/" . str_pad($ticket->id, 7, 0, STR_PAD_LEFT);
             $ticket->human_readable_created_at = Carbon::parse($ticket->created_at)->diffForHumans();
+            $ticket->human_readable_updated_at = Carbon::parse($ticket->updated_at)->diffForHumans();
         });
         return $tickets->toArray();
     }

@@ -2,7 +2,7 @@
 import { ref, computed, onMounted, watch, reactive, defineComponent } from 'vue';
 import axios from 'axios';
 import { useRouter } from 'vue-router';
-import { getAccessToken, getUser, validateUser } from '../../helper/utils';
+import { getAccessToken, getUser, isUserStaff, validateUser, decodeHtml, jsonToQueryString } from '../../helper/utils';
 // import { PulseLoader } from 'vue-spinner/dist/vue-spinner.min.js';
 // const spinnerType = 'Wave';
 
@@ -21,7 +21,7 @@ let selectedStatus = ref('');
 let selectedPriority = ref('');
 let filter = ref('')
 let loading = ref(false);
-let users = ref(null)
+let user = ref(null)
 
 let activePriorityTicketId = ref(null)
 let selectedPriorityChange = ref(null)
@@ -30,14 +30,16 @@ let activeStatusTicketId = ref(null)
 let selectedStatusChange = ref(null)
 
 const access_token = getAccessToken()
+let isStaff = ref(false)
 let isLoggedIn = ref(false);
 
+const numRowsOptions = [ 10, 25, 50, 100 ];
 const tableHeaders = reactive([
     { label: 'No.', key: 'number', size: 16, isSortable: false },
     { label: 'Assign To', key: 'assign', size: 10, isSortable: false },
     { label: 'Title', key: 'title', size: 0, isSortable: false },
-    { label: 'Priority', key: 'priority', size: 26, isSortable: false },
-    { label: 'Status', key: 'status', size: 32, isSortable: false },
+    { label: 'Priority', key: 'priority', size: 26, isSortable: true },
+    { label: 'Status', key: 'status', size: 32, isSortable: true },
     { label: 'Date', key: 'date', size: 36, isSortable: false },
 ]);
 
@@ -56,6 +58,7 @@ const tableHeaders = reactive([
 // Multiple Sort
 const sortKeys = ref([]);
 const isAscending = reactive({});
+const sorting = ref(null)
 
 const sort = (key) => {
     if (sortKeys.value.includes(key)) {
@@ -64,14 +67,14 @@ const sort = (key) => {
         sortKeys.value.push(key);
         isAscending[ key ] = true;
     }
-
-    // Implement your sorting logic here based on sortKeys.value and isAscending
-    // For example, you can sort the table data using a computed property.
+    sorting.value = jsonToQueryString(isAscending)
+    currentPage.value = 1
+    getTickets()
 };
 const isSorted = (key) => {
+
     return sortKeys.value.includes(key);
 };
-
 
 const prioritiesColor = [
     { id: 1, name: 'low', colorClass: 'bg-blue-200 text-blue-800' },
@@ -87,38 +90,20 @@ const statusesColor = [
     { id: 4, name: 'pending', colorClass: 'bg-yellow-200 text-yellow-800' },
 ];
 
-const numRowsOptions = [ 10, 25, 50, 100 ];
+
 
 const getTickets = async () => {
+
     if (searchTerm.value) {
         search.value = `&search=${encodeURIComponent(searchTerm.value.trim().toLowerCase())}`
     }
-    const url = `/api/get_all_ticket?page=${currentPage.value}&per_page=${numRows.value}${search.value === null ? '' : search.value}${filter.value === null ? '' : filter.value}`
+    const url = `/api/get_all_ticket?page=${currentPage.value}&per_page=${numRows.value}${search.value === null ? '' : search.value}${filter.value === null ? '' : filter.value}${sorting.value === null ? '' : `&sorting=${encodeURIComponent(sorting.value)}`}`
     const res = await axios.get(url, { headers: { 'Accept': 'application/json' } });
     tickets.value = res.data.data;
     currentPage.value = res.data.current_page
     ticket_links.value = res.data.links
     loading.value = false
 };
-
-// Listen to channel
-window.Echo.channel('ticketUpdate')
-    .listen('.ticket.update', (event) => {
-        // Find the updated ticket in the reactive array based on the unique identifier (id)
-        const updatedTicket = tickets.value.find((ticket) => ticket.id === event[ 0 ].id);
-
-        if (updatedTicket) {
-            // Update the relevant properties of the event subscribed
-            updatedTicket.title = event[ 0 ].title;
-            updatedTicket.description = event[ 0 ].description;
-            updatedTicket.created_at = event[ 0 ].created_at;
-            updatedTicket.updated_at = event[ 0 ].updated_at;
-            updatedTicket.priority = event[ 0 ].priority;
-            updatedTicket.status = event[ 0 ].status;
-            updatedTicket.link = event[ 0 ].link;
-            updatedTicket.human_readable_created_at = event[ 0 ].human_readable_created_at;
-        }
-    });
 
 const getLookup = async () => {
     const res = await axios.get('/api/lookup')
@@ -131,12 +116,6 @@ const getLookup = async () => {
         }
     });
 }
-
-const decodeHtml = ((text) => {
-    const parser = new DOMParser();
-    const decoded = parser.parseFromString(text, 'text/html').body.textContent;
-    return decoded
-})
 
 const handlePageChange = (link) => {
     loading.value = true
@@ -164,6 +143,7 @@ const handleSearch = () => {
     // Set a new timeout to delay the execution of getTickets()
     searchTimeout = setTimeout(() => {
         loading.value = true;
+        currentPage.value = 1
         getTickets()
     }, 500); // Adjust the delay time as needed (in milliseconds)
 }
@@ -251,16 +231,7 @@ const handlePriorityChange = () => {
     activePriorityTicketId.value = null
 }
 
-const showPriorityDropdown = (event, ticketId) => {
-    if (!isLoggedIn.value)
-        return
 
-
-    if (users.value.roles.find((role) => role.name === 'staff')) {
-        event.stopPropagation()
-        activePriorityTicketId.value = ticketId;
-    }
-}
 const handleStatusChange = () => {
     fetch(`/api/ticket/${activeStatusTicketId.value}/status`, {
         method: 'post',
@@ -276,13 +247,21 @@ const handleStatusChange = () => {
     activeStatusTicketId.value = null
 }
 
-const showStatusDropdown = (event, ticketId) => {
-    if (!isLoggedIn.value) return
+const showPriorityDropdown = (event, ticketId) => {
+    if (isLoggedIn.value && isStaff.value) {
+        event.stopPropagation()
+        activePriorityTicketId.value = ticketId;
+    }
+    return
+}
 
-    if (users.value.roles.find((role) => role.name === 'staff')) {
+const showStatusDropdown = (event, ticketId) => {
+
+    if (isLoggedIn.value && isStaff.value) {
         event.stopPropagation()
         activeStatusTicketId.value = ticketId;
     }
+    return
 }
 
 // watch number of rows change
@@ -300,10 +279,32 @@ onMounted(async () => {
 
     // validate user
     isLoggedIn.value = await validateUser()
-    console.log('isLoggedIn', isLoggedIn.value)
     if (isLoggedIn.value) {
-        users.value = await getUser()
+        user.value = await getUser()
+        isStaff.value = isUserStaff(user.value)
     }
+    // Listen to channel
+    window.Echo.channel('ticketUpdate')
+        .listen('.ticket.update', (event) => {
+            console.log(event)
+            // Find the updated ticket in the reactive array based on the unique identifier (id)
+            const updatedTicket = tickets.value.find((ticket) => ticket.id === event[ 0 ].id);
+            if (!updatedTicket) return
+
+            // Update the relevant properties of the event subscribed
+            updatedTicket.title = event[ 0 ].title;
+            updatedTicket.description = event[ 0 ].description;
+            updatedTicket.created_at = event[ 0 ].created_at;
+            updatedTicket.updated_at = event[ 0 ].updated_at;
+            updatedTicket.priority = event[ 0 ].priority;
+            updatedTicket.status = event[ 0 ].status;
+            updatedTicket.link = event[ 0 ].link;
+            updatedTicket.human_readable_created_at = event[ 0 ].human_readable_created_at;
+            updatedTicket.human_readable_updated_at = event[ 0 ].human_readable_updated_at;
+        });
+
+    console.log('isStaff', isStaff.value)
+    console.log('isLoggedIn', isLoggedIn.value)
 });
 
 
@@ -490,7 +491,7 @@ onMounted(async () => {
                                     </option>
                                 </select>
                             </td>
-                            <td class="px-4 py-2 text-center">{{ ticket.human_readable_created_at }}</td>
+                            <td class="px-4 py-2 text-center">{{ ticket.human_readable_updated_at }}</td>
                         </tr>
                     </tbody>
                     <tbody v-else>

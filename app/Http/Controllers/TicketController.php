@@ -29,11 +29,18 @@ class TicketController extends Controller
         $availableFilterColumn = ['priority', 'status'];
         $table = 'ticket_';
         $search = null;
+        $searchId = null;
 
 
-        if (request()->has('order')) {
-            $orderParams = $this->extractQueryParams(request('order'));
-            $queryOrderParams = $this->checkQueryNames($orderParams, $availableOrderColumn, 'sorting');
+        if (request()->has('sorting')) {
+            $orderParams = $this->extractQueryParams(request('sorting'));
+            $encodedQueryOrderParams = $this->checkQueryNames($orderParams, $availableOrderColumn, 'sorting');
+            $queryOrderParams = array_map(function ($sort) {
+                $query = urldecode($sort);
+                if ($query === 'true') return 'asc';
+                if ($query === 'false') return 'desc';
+            }, $encodedQueryOrderParams);
+            $queryOrderParams;
         }
 
         if (request()->has('filter')) {
@@ -49,6 +56,7 @@ class TicketController extends Controller
 
         if (request()->has('search') && gettype(request('search')) === 'string') {
             $search = '%' . urldecode(trim(request('search'))) . '%';
+            $searchId = ltrim(request('search'), '#');
         }
 
         $tickets = Ticket::select(['id', 'title', 'description', 'created_at', 'updated_at', 'priority', 'status', 'creator', 'assignee'])->with([
@@ -56,7 +64,15 @@ class TicketController extends Controller
             'assignee:id,name'
         ])
             ->when(auth()->id(), fn ($query) => $query->where('creator', auth()->id()))
-            ->when($search, fn ($query) => $query->where('title', 'like', $search))
+            ->when(
+                $search,
+                fn ($query) => $query
+                    ->where('title', 'like', $search)
+                    ->orWhere('id', $searchId)
+                    ->orWhereHas('user', function ($query) use ($search) {
+                        $query->where('name', 'like',  $search);
+                    })
+            )
 
             // Filtering
             ->when(count($queryFilterParams) > 0, function ($query) use ($queryFilterParams, $table) {
@@ -90,12 +106,13 @@ class TicketController extends Controller
             ->paginate(request('per_page') ?? 10);
 
         $tickets->getCollection()->map(function ($ticket) {
-            $ticket->created_at = Carbon::parse($ticket->created_at)->format('Y-m-d H:i:s');
-            $ticket->updated_at = Carbon::parse($ticket->updated_at)->format('Y-m-d H:i:s');
+            $ticket->created_at = Carbon::parse($ticket->created_at->format('Y-m-d H:i:s'))->diffForHumans();
+            $ticket->updated_at = Carbon::parse($ticket->updated_at->format('Y-m-d H:i:s'))->diffForHumans();
             $ticket->priority = $this->getPriority($ticket->priority);
             $ticket->status = $this->getStatus($ticket->status);
             $ticket->link = "/ticket/" . str_pad($ticket->id, 7, 0, STR_PAD_LEFT);
             $ticket->human_readable_created_at = Carbon::parse($ticket->created_at)->diffForHumans();
+            $ticket->human_readable_updated_at = Carbon::parse($ticket->updated_at)->diffForHumans();
         });
         return $tickets;
     }
