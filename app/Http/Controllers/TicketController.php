@@ -25,7 +25,7 @@ class TicketController extends Controller
 
         $queryOrderParams = [];
         $queryFilterParams = [];
-        $availableOrderColumn = ['priority', 'status', 'created_at', 'title'];
+        $availableOrderColumn = ['priority', 'status', 'updated_at', 'title'];
         $availableFilterColumn = ['priority', 'status'];
         $table = 'ticket_';
         $search = null;
@@ -48,10 +48,6 @@ class TicketController extends Controller
             $encodedFilterParams = $this->checkQueryNames($filterParams, $availableFilterColumn, 'filtering');
             // decode
             $queryFilterParams = array_map(fn ($query) => base64_decode($query), ($encodedFilterParams));
-            // foreach ($queryFilterParams as $key => $value) {
-            //     return [$key, $value];
-            // }
-            // return $queryFilterParams;
         }
 
         if (request()->has('search') && gettype(request('search')) === 'string') {
@@ -77,17 +73,6 @@ class TicketController extends Controller
             // Filtering
             ->when(count($queryFilterParams) > 0, function ($query) use ($queryFilterParams, $table) {
                 foreach ($queryFilterParams as $key => $value) {
-                    // $values = explode(',', $value);
-                    // $type = $table . $key;
-                    // $lookup = $this->lookupElement($type);
-                    // $filteredLookup = array_filter($lookup, function ($item) use ($values) {
-                    //     return in_array($item['name'], $values);
-                    // });
-                    // $filteredIds = array_map(function ($item) {
-                    //     return $item['id'];
-                    // }, $filteredLookup);
-
-                    // $query->whereIn($key, $filteredIds);
                     $query->where($key, $value);
                 }
             })
@@ -103,6 +88,8 @@ class TicketController extends Controller
                 fn ($query) => $query->orderBy('priority', 'desc')
                     ->orderBy('created_at', 'asc')
             )
+            // ->toSql();
+            // return $tickets;
             ->paginate(request('per_page') ?? 10);
 
         $tickets->getCollection()->map(function ($ticket) {

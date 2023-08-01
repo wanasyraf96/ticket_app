@@ -37,10 +37,10 @@ const numRowsOptions = [ 10, 25, 50, 100 ];
 const tableHeaders = reactive([
     { label: 'No.', key: 'number', size: 16, isSortable: false },
     { label: 'Assign To', key: 'assign', size: 10, isSortable: false },
-    { label: 'Title', key: 'title', size: 0, isSortable: false },
+    { label: 'Title', key: 'title', size: 0, isSortable: true },
     { label: 'Priority', key: 'priority', size: 26, isSortable: true },
     { label: 'Status', key: 'status', size: 32, isSortable: true },
-    { label: 'Date', key: 'date', size: 36, isSortable: false },
+    { label: 'Date', key: 'updated_at', size: 36, isSortable: true },
 ]);
 
 // Multiple Sort
