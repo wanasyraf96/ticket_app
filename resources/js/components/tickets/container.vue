@@ -2,6 +2,7 @@
 import { ref, computed, onMounted, watch, reactive, defineComponent } from 'vue';
 import axios from 'axios';
 import { useRouter } from 'vue-router';
+import { getAccessToken, getUser, validateUser } from '../../helper/utils';
 // import { PulseLoader } from 'vue-spinner/dist/vue-spinner.min.js';
 // const spinnerType = 'Wave';
 
@@ -28,7 +29,8 @@ let selectedPriorityChange = ref(null)
 let activeStatusTicketId = ref(null)
 let selectedStatusChange = ref(null)
 
-const access_token = localStorage.getItem('access_token')
+const access_token = getAccessToken()
+let isLoggedIn = ref(false);
 
 const tableHeaders = reactive([
     { label: 'No.', key: 'number', size: 16, isSortable: false },
@@ -99,34 +101,14 @@ const getTickets = async () => {
     loading.value = false
 };
 
-const getUser = async () => {
-
-    if (access_token === null || access_token === undefined)
-        router.push('/')
-
-    const res = await axios({
-        url: '/api/user',
-        method: 'get',
-        headers: {
-            'Authorization': `Bearer ${access_token}`,
-            'Accept': 'application/json',
-        }
-    })
-    users.value = res.data
-}
-
 // Listen to channel
 window.Echo.channel('ticketUpdate')
     .listen('.ticket.update', (event) => {
-        console.log('event', event[ 0 ])
-        console.log('ticket', tickets.value)
-
         // Find the updated ticket in the reactive array based on the unique identifier (id)
         const updatedTicket = tickets.value.find((ticket) => ticket.id === event[ 0 ].id);
-        console.log('Updated ticket:', updatedTicket);
 
         if (updatedTicket) {
-            // Update the relevant properties of the ticket with the new data from the event[0]
+            // Update the relevant properties of the event subscribed
             updatedTicket.title = event[ 0 ].title;
             updatedTicket.description = event[ 0 ].description;
             updatedTicket.created_at = event[ 0 ].created_at;
@@ -135,7 +117,6 @@ window.Echo.channel('ticketUpdate')
             updatedTicket.status = event[ 0 ].status;
             updatedTicket.link = event[ 0 ].link;
             updatedTicket.human_readable_created_at = event[ 0 ].human_readable_created_at;
-            // Add more properties as needed
         }
     });
 
@@ -271,6 +252,10 @@ const handlePriorityChange = () => {
 }
 
 const showPriorityDropdown = (event, ticketId) => {
+    if (!isLoggedIn.value)
+        return
+
+
     if (users.value.roles.find((role) => role.name === 'staff')) {
         event.stopPropagation()
         activePriorityTicketId.value = ticketId;
@@ -292,6 +277,8 @@ const handleStatusChange = () => {
 }
 
 const showStatusDropdown = (event, ticketId) => {
+    if (!isLoggedIn.value) return
+
     if (users.value.roles.find((role) => role.name === 'staff')) {
         event.stopPropagation()
         activeStatusTicketId.value = ticketId;
@@ -310,7 +297,13 @@ onMounted(async () => {
     loading.value = true;
     await getTickets()
     await getLookup()
-    await getUser()
+
+    // validate user
+    isLoggedIn.value = await validateUser()
+    console.log('isLoggedIn', isLoggedIn.value)
+    if (isLoggedIn.value) {
+        users.value = await getUser()
+    }
 });
 
 
