@@ -43,18 +43,6 @@ const tableHeaders = reactive([
     { label: 'Date', key: 'date', size: 36, isSortable: false },
 ]);
 
-// Single Sort
-// const sortKey = ref(null)
-// const isAscending = ref(true)
-// const sort = (key) => {
-//     if (sortKey.value === key) {
-//         isAscending.value = !isAscending.value;
-//     } else {
-//         sortKey.value = key;
-//         isAscending.value = true;
-//     }
-// }
-
 // Multiple Sort
 const sortKeys = ref([]);
 const isAscending = reactive({});
@@ -62,7 +50,13 @@ const sorting = ref(null)
 
 const sort = (key) => {
     if (sortKeys.value.includes(key)) {
-        isAscending[ key ] = !isAscending[ key ];
+        if (isAscending[ key ] === true)
+            isAscending[ key ] = !isAscending[ key ];
+        else {
+            sortKeys.value = sortKeys.value.filter((element) => element !== key)
+            delete isAscending[ key ]
+        }
+
     } else {
         sortKeys.value.push(key);
         isAscending[ key ] = true;
@@ -70,6 +64,9 @@ const sort = (key) => {
     sorting.value = jsonToQueryString(isAscending)
     currentPage.value = 1
     getTickets()
+
+    console.log(sortKeys.value)
+    console.log(isAscending)
 };
 const isSorted = (key) => {
 
@@ -90,14 +87,12 @@ const statusesColor = [
     { id: 4, name: 'pending', colorClass: 'bg-yellow-200 text-yellow-800' },
 ];
 
-
-
 const getTickets = async () => {
 
     if (searchTerm.value) {
         search.value = `&search=${encodeURIComponent(searchTerm.value.trim().toLowerCase())}`
     }
-    const url = `/api/get_all_ticket?page=${currentPage.value}&per_page=${numRows.value}${search.value === null ? '' : search.value}${filter.value === null ? '' : filter.value}${sorting.value === null ? '' : `&sorting=${encodeURIComponent(sorting.value)}`}`
+    const url = `/api/get_all_ticket?page=${currentPage.value}&per_page=${numRows.value}${search.value === null ? '' : search.value}${filter.value === null ? '' : filter.value}${Object.keys(isAscending).length === 0 ? '' : `&sorting=${encodeURIComponent(sorting.value)}`}`
     const res = await axios.get(url, { headers: { 'Accept': 'application/json' } });
     tickets.value = res.data.data;
     currentPage.value = res.data.current_page
@@ -390,39 +385,6 @@ onMounted(async () => {
 
                 <!-- Table -->
                 <table class="table-auto w-full border-collapse">
-                    <!-- <thead class="">
-                        <tr class="border-b">
-                            <th class="px-4 py-4 text-center w-32">
-                                No.
-                            </th>
-                            <th class="px-4 py-4 text-center w-24">
-                                Priority
-                            </th>
-                            <th class="px-4 py-4 text-center">
-                                Title
-                            </th>
-                            <th class="px-4 py-4 text-center w-24">
-                                Status
-                            </th>
-                            <th class="px-4 py-4 text-center w-32">
-                                Date
-                            </th>
-                        </tr>
-                    </thead> -->
-
-                    <!-- Single Sorting -->
-                    <!-- <thead>
-                        <tr class="border-b">
-                            <th v-for="header in tableHeaders" :key="header.key" :class="{
-                                'sorted-asc': sortKey === header.key && isAscending,
-                                'sorted-desc': sortKey === header.key && !isAscending,
-                                'px-4 py-4 text-center w-24 sortable-header': header.isSortable,
-                                'px-4 py-4 text-center': !header.isSortable,
-                            }" @click="header.isSortable && sort(header.key)">
-                                {{ header.label }}
-                            </th>
-                        </tr>
-                    </thead> -->
 
                     <thead>
                         <tr class="border-b">
